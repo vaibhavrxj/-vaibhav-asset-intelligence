@@ -29,6 +29,9 @@ export const products = pgTable("products", {
   detectedTexture: text("detected_texture"),
   detectedDimensions: text("detected_dimensions"), // e.g. "10x20x5"
   lastScannedAt: timestamp("last_scanned_at"),
+  // AI Prediction fields
+  predictedStock: integer("predicted_stock"),
+  predictedDemand: integer("predicted_demand"),
 });
 
 // Linking Products to Materials (Recipe)
@@ -59,6 +62,36 @@ export const inventoryLogs = pgTable("inventory_logs", {
   description: text("description"),
 });
 
+// Vision Status Logs (AI-detected anomalies)
+export const visionStatusLogs = pgTable("vision_status_logs", {
+  id: serial("id").primaryKey(),
+  timestamp: timestamp("timestamp").defaultNow(),
+  productId: integer("product_id").notNull(),
+  sku: text("sku").notNull(),
+  status: text("status").notNull(), // "OK", "DAMAGED", "NON_STANDARD", "UNKNOWN"
+  confidenceScore: real("confidence_score"),
+  detectedClass: text("detected_class"),
+  boundingBox: jsonb("bounding_box"), // { x, y, width, height }
+  imageData: text("image_data"), // Base64 encoded
+  notes: text("notes"),
+});
+
+// Conversations for AI Chatbot
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Messages for AI Chatbot
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull(),
+  role: text("role").notNull(), // "user" or "assistant"
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // === RELATIONS ===
 
 export const productRecipesRelations = relations(productRecipes, ({ one }) => ({
@@ -82,10 +115,13 @@ export const salesRelations = relations(sales, ({ one }) => ({
 // === BASE SCHEMAS ===
 
 export const insertMaterialSchema = createInsertSchema(materials).omit({ id: true });
-export const insertProductSchema = createInsertSchema(products).omit({ id: true, lastScannedAt: true });
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, lastScannedAt: true, predictedStock: true, predictedDemand: true });
 export const insertRecipeSchema = createInsertSchema(productRecipes).omit({ id: true });
 export const insertSaleSchema = createInsertSchema(sales).omit({ id: true, timestamp: true });
 export const insertLogSchema = createInsertSchema(inventoryLogs).omit({ id: true, timestamp: true });
+export const insertVisionStatusLogSchema = createInsertSchema(visionStatusLogs).omit({ id: true, timestamp: true });
+export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true });
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -102,6 +138,15 @@ export type Sale = typeof sales.$inferSelect;
 export type InsertSale = z.infer<typeof insertSaleSchema>;
 
 export type InventoryLog = typeof inventoryLogs.$inferSelect;
+
+export type VisionStatusLog = typeof visionStatusLogs.$inferSelect;
+export type InsertVisionStatusLog = z.infer<typeof insertVisionStatusLogSchema>;
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
 // Request types
 export type CreateMaterialRequest = InsertMaterial;
