@@ -128,7 +128,7 @@ export default function Sales() {
                         <SelectContent>
                           {products?.map((p) => (
                             <SelectItem key={p.id} value={p.id.toString()}>
-                              {p.name} (Stock: {p.quantity}) - ${p.price}
+                              {p.name} (Stock: {p.quantity}) - ₹{p.price}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -164,7 +164,7 @@ export default function Sales() {
                   name="totalPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Sale Value ($)</FormLabel>
+                      <FormLabel>Total Sale Value (₹)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} readOnly className="bg-muted font-bold" />
                       </FormControl>
@@ -223,7 +223,7 @@ export default function Sales() {
                       {sale.quantity}
                     </TableCell>
                     <TableCell className="text-right font-mono font-bold text-green-600 dark:text-green-400">
-                      +${sale.totalPrice.toFixed(2)}
+                      +₹{sale.totalPrice.toLocaleString('en-IN')}
                     </TableCell>
                   </TableRow>
                 );

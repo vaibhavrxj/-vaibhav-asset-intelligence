@@ -177,7 +177,7 @@ export default function Materials() {
                   name="costPerUnit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cost Per Unit ($)</FormLabel>
+                      <FormLabel>Cost Per Unit (₹)</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} />
                       </FormControl>
@@ -245,7 +245,7 @@ export default function Materials() {
                       {item.name}
                     </TableCell>
                     <TableCell className="font-mono">
-                      ${item.costPerUnit.toFixed(2)} / {item.unit}
+                      ₹{item.costPerUnit.toLocaleString('en-IN')} / {item.unit}
                     </TableCell>
                     <TableCell>
                       <div className="font-mono font-bold text-sm">
@@ -256,7 +256,7 @@ export default function Materials() {
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-muted-foreground">
-                      ${(item.quantity * item.costPerUnit).toFixed(2)}
+                      ₹{(item.quantity * item.costPerUnit).toLocaleString('en-IN')}
                     </TableCell>
                   </TableRow>
                 ))

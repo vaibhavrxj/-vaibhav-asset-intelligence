@@ -66,7 +66,7 @@ export default function Dashboard() {
         />
         <StatsCard 
           title="Total Revenue" 
-          value={`$${totalRevenue.toLocaleString()}`} 
+          value={`₹${totalRevenue.toLocaleString('en-IN')}`} 
           icon={DollarSign}
           description="All time sales volume"
         />
@@ -106,7 +106,7 @@ export default function Dashboard() {
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => `$${value}`}
+                    tickFormatter={(value) => `₹${value}`}
                   />
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                   <Tooltip 

@@ -162,7 +162,7 @@ export default function Products() {
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Unit Price ($)</FormLabel>
+                        <FormLabel>Unit Price (₹)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} />
                         </FormControl>
@@ -236,7 +236,7 @@ export default function Products() {
                       )}
                     </TableCell>
                     <TableCell className="font-mono">
-                      ${product.price.toFixed(2)}
+                      ₹{product.price.toLocaleString('en-IN')}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
