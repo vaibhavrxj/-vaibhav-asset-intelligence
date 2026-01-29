@@ -1,18 +1,122 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// === TABLE DEFINITIONS ===
+
+// Raw Materials
+export const materials = pgTable("materials", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  sku: text("sku").notNull().unique(),
+  quantity: integer("quantity").notNull().default(0),
+  unit: text("unit").notNull(), // e.g., "kg", "meters", "pcs"
+  costPerUnit: real("cost_per_unit").notNull(),
+  minStockLevel: integer("min_stock_level").default(10),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+// Products (Handmade items)
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  sku: text("sku").notNull().unique(), // The code the vision engine might scan
+  description: text("description"),
+  quantity: integer("quantity").notNull().default(0),
+  price: real("price").notNull(),
+  // Vision Engine specific fields
+  detectedColor: text("detected_color"),
+  detectedTexture: text("detected_texture"),
+  detectedDimensions: text("detected_dimensions"), // e.g. "10x20x5"
+  lastScannedAt: timestamp("last_scanned_at"),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// Linking Products to Materials (Recipe)
+export const productRecipes = pgTable("product_recipes", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull(),
+  materialId: integer("material_id").notNull(),
+  quantityRequired: real("quantity_required").notNull(),
+});
+
+// Sales
+export const sales = pgTable("sales", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull(),
+  quantity: integer("quantity").notNull(),
+  totalPrice: real("total_price").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Inventory Logs (Tracking all movements)
+export const inventoryLogs = pgTable("inventory_logs", {
+  id: serial("id").primaryKey(),
+  timestamp: timestamp("timestamp").defaultNow(),
+  action: text("action").notNull(), // "SALE", "RESTOCK", "ADJUSTMENT", "PRODUCTION"
+  entityType: text("entity_type").notNull(), // "PRODUCT" or "MATERIAL"
+  entityId: integer("entity_id").notNull(),
+  changeAmount: real("change_amount").notNull(), // Positive or negative
+  description: text("description"),
+});
+
+// === RELATIONS ===
+
+export const productRecipesRelations = relations(productRecipes, ({ one }) => ({
+  product: one(products, {
+    fields: [productRecipes.productId],
+    references: [products.id],
+  }),
+  material: one(materials, {
+    fields: [productRecipes.materialId],
+    references: [materials.id],
+  }),
+}));
+
+export const salesRelations = relations(sales, ({ one }) => ({
+  product: one(products, {
+    fields: [sales.productId],
+    references: [products.id],
+  }),
+}));
+
+// === BASE SCHEMAS ===
+
+export const insertMaterialSchema = createInsertSchema(materials).omit({ id: true });
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, lastScannedAt: true });
+export const insertRecipeSchema = createInsertSchema(productRecipes).omit({ id: true });
+export const insertSaleSchema = createInsertSchema(sales).omit({ id: true, timestamp: true });
+export const insertLogSchema = createInsertSchema(inventoryLogs).omit({ id: true, timestamp: true });
+
+// === EXPLICIT API CONTRACT TYPES ===
+
+export type Material = typeof materials.$inferSelect;
+export type InsertMaterial = z.infer<typeof insertMaterialSchema>;
+
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+
+export type Recipe = typeof productRecipes.$inferSelect;
+export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
+
+export type Sale = typeof sales.$inferSelect;
+export type InsertSale = z.infer<typeof insertSaleSchema>;
+
+export type InventoryLog = typeof inventoryLogs.$inferSelect;
+
+// Request types
+export type CreateMaterialRequest = InsertMaterial;
+export type UpdateMaterialRequest = Partial<InsertMaterial>;
+
+export type CreateProductRequest = InsertProduct;
+export type UpdateProductRequest = Partial<InsertProduct>;
+
+// For the Vision Engine
+export type ScanResultRequest = {
+  sku: string;
+  detectedColor?: string;
+  detectedTexture?: string;
+  detectedDimensions?: string;
+};
+
+// Response types
+export type ProductWithDetails = Product & { materials?: (Recipe & { material: Material })[] };
