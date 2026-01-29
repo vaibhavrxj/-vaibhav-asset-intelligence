@@ -6,7 +6,8 @@ import {
   ScanLine, 
   DollarSign, 
   Menu,
-  Hexagon
+  Hexagon,
+  TrendingUp
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/materials", label: "Materials", icon: Container },
   { href: "/scan", label: "Smart Scan", icon: ScanLine },
   { href: "/sales", label: "Sales", icon: DollarSign },
+  { href: "/analytics", label: "AI Analytics", icon: TrendingUp },
 ];
 
 export function Layout({ children }: LayoutProps) {

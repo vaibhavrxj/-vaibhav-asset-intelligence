@@ -9,7 +9,9 @@ import Products from "@/pages/products";
 import Materials from "@/pages/materials";
 import SmartScan from "@/pages/smart-scan";
 import Sales from "@/pages/sales";
+import Analytics from "@/pages/analytics";
 import NotFound from "@/pages/not-found";
+import { AIChatbotDrawer } from "@/components/ai-chatbot-drawer";
 
 function Router() {
   return (
@@ -20,6 +22,7 @@ function Router() {
         <Route path="/materials" component={Materials} />
         <Route path="/scan" component={SmartScan} />
         <Route path="/sales" component={Sales} />
+        <Route path="/analytics" component={Analytics} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -32,6 +35,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
+        <AIChatbotDrawer />
       </TooltipProvider>
     </QueryClientProvider>
   );

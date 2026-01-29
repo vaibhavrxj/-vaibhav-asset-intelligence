@@ -145,8 +145,6 @@ export function useLatestScan() {
   return useQuery({
     queryKey: ["latest-scan"],
     queryFn: async () => {
-      // In a real app with websockets, this would be pushed.
-      // Here we poll the products list to find the one with the most recent `lastScannedAt`
       const res = await fetch(api.products.list.path);
       if (!res.ok) throw new Error("Failed to fetch scan data");
       const products = api.products.list.responses[200].parse(await res.json());
@@ -154,11 +152,121 @@ export function useLatestScan() {
       const scannedProducts = products.filter(p => p.lastScannedAt);
       if (scannedProducts.length === 0) return null;
       
-      // Sort descending by date
       return scannedProducts.sort((a, b) => {
         return new Date(b.lastScannedAt!).getTime() - new Date(a.lastScannedAt!).getTime();
       })[0];
     },
-    refetchInterval: 2000, // Poll every 2 seconds
+    refetchInterval: 2000,
+  });
+}
+
+// ==========================================
+// FORECASTING / AI ANALYTICS
+// ==========================================
+
+export interface ForecastPrediction {
+  day: number;
+  date: string;
+  predicted_demand: number;
+  predicted_stock: number;
+}
+
+export interface ProductForecast {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  current_stock: number;
+  predictions: ForecastPrediction[];
+  total_predicted_demand: number;
+  needs_reorder: boolean;
+}
+
+export function useForecast() {
+  return useQuery({
+    queryKey: ["/api/analytics/forecast"],
+    queryFn: async () => {
+      const res = await fetch("/api/analytics/forecast");
+      if (!res.ok) throw new Error("Failed to fetch forecast");
+      const data = await res.json();
+      return data.data as ProductForecast[];
+    },
+    refetchInterval: 60000, // Refresh every minute
+  });
+}
+
+// ==========================================
+// VISION STATUS LOGS
+// ==========================================
+
+export interface VisionStatusLog {
+  id: number;
+  timestamp: string;
+  productId: number;
+  sku: string;
+  status: string;
+  confidenceScore: number | null;
+  detectedClass: string | null;
+  boundingBox: { x: number; y: number; width: number; height: number } | null;
+  notes: string | null;
+}
+
+export function useVisionLogs() {
+  return useQuery({
+    queryKey: ["/api/vision/status-logs"],
+    queryFn: async () => {
+      const res = await fetch("/api/vision/status-logs");
+      if (!res.ok) throw new Error("Failed to fetch vision logs");
+      const data = await res.json();
+      return data.data as VisionStatusLog[];
+    },
+    refetchInterval: 5000,
+  });
+}
+
+export function useVisionAnomalies() {
+  return useQuery({
+    queryKey: ["/api/vision/anomalies"],
+    queryFn: async () => {
+      const res = await fetch("/api/vision/anomalies");
+      if (!res.ok) throw new Error("Failed to fetch anomalies");
+      const data = await res.json();
+      return data.data as VisionStatusLog[];
+    },
+    refetchInterval: 10000,
+  });
+}
+
+export function useTriggerScan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/vision/scan", { method: "POST" });
+      if (!res.ok) throw new Error("Scan failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/vision/status-logs"] });
+      queryClient.invalidateQueries({ queryKey: [api.products.list.path] });
+    },
+  });
+}
+
+export function useReorderProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, quantity }: { id: number; quantity?: number }) => {
+      const res = await fetch(`/api/products/${id}/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: quantity || 50 })
+      });
+      if (!res.ok) throw new Error("Reorder failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.products.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/forecast"] });
+      queryClient.invalidateQueries({ queryKey: [api.logs.list.path] });
+    },
   });
 }

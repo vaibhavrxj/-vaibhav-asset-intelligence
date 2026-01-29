@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useProducts, useCreateProduct } from "@/hooks/use-inventory";
+import { useProducts, useCreateProduct, useForecast, useReorderProduct } from "@/hooks/use-inventory";
 import { insertProductSchema } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Table, 
   TableBody, 
@@ -30,7 +31,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, AlertCircle, ScanBarcode } from "lucide-react";
+import { Plus, Search, AlertCircle, ScanBarcode, ShoppingCart, TrendingDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +47,32 @@ export default function Products() {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { data: products, isLoading } = useProducts();
+  const { data: forecasts } = useForecast();
   const createProduct = useCreateProduct();
+  const reorderProduct = useReorderProduct();
+  const { toast } = useToast();
+
+  const getForecastForProduct = (productId: number) => {
+    return forecasts?.find(f => f.product_id === productId);
+  };
+
+  const handleReorder = (productId: number, productName: string) => {
+    reorderProduct.mutate({ id: productId, quantity: 50 }, {
+      onSuccess: () => {
+        toast({
+          title: "Reorder Placed",
+          description: `Successfully ordered 50 units of ${productName}`,
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Reorder Failed",
+          description: "Could not place the reorder.",
+          variant: "destructive"
+        });
+      }
+    });
+  };
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -204,6 +230,7 @@ export default function Products() {
                 <TableHead>Product Name</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock Level</TableHead>
+                <TableHead>Prediction</TableHead>
                 <TableHead>Vision Data</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -211,13 +238,13 @@ export default function Products() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Loading inventory...
                   </TableCell>
                 </TableRow>
               ) : filteredProducts?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     No products found. Add one to get started.
                   </TableCell>
                 </TableRow>
@@ -239,19 +266,59 @@ export default function Products() {
                       ₹{product.price.toLocaleString('en-IN')}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "px-2.5 py-0.5 rounded-full text-xs font-semibold",
-                          product.quantity < 10 
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-900" 
-                            : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-900"
-                        )}>
-                          {product.quantity} units
-                        </span>
-                        {product.quantity < 10 && (
-                          <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
-                        )}
-                      </div>
+                      {(() => {
+                        const forecast = getForecastForProduct(product.id);
+                        const needsReorder = forecast?.needs_reorder || (forecast?.total_predicted_demand && forecast.total_predicted_demand > product.quantity);
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "px-2.5 py-0.5 rounded-full text-xs font-semibold",
+                              needsReorder
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-900" 
+                                : product.quantity < 10 
+                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-900"
+                                  : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-900"
+                            )}>
+                              {product.quantity} units
+                            </span>
+                            {needsReorder && (
+                              <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const forecast = getForecastForProduct(product.id);
+                        if (!forecast) {
+                          return <span className="text-xs text-muted-foreground italic">Loading...</span>;
+                        }
+                        const needsReorder = forecast.needs_reorder || forecast.total_predicted_demand > product.quantity;
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <TrendingDown className={cn("w-3 h-3", needsReorder ? "text-red-500" : "text-muted-foreground")} />
+                              <span className={needsReorder ? "text-red-600 dark:text-red-400 font-medium" : ""}>
+                                7d demand: {forecast.total_predicted_demand}
+                              </span>
+                            </div>
+                            {needsReorder && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-6 text-xs"
+                                onClick={() => handleReorder(product.id, product.name)}
+                                disabled={reorderProduct.isPending}
+                                data-testid={`button-reorder-${product.id}`}
+                              >
+                                <ShoppingCart className="w-3 h-3 mr-1" />
+                                Reorder
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       {product.detectedColor || product.detectedDimensions ? (
