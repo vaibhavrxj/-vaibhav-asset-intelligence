@@ -68,8 +68,8 @@ A comprehensive AI-powered asset verification and inventory management system bu
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/Asset-Verifier-System.git
-cd Asset-Verifier-System
+git clone https://github.com/vaibhav/vaibhav-asset-intelligence.git
+cd vaibhav-asset-intelligence
 ```
 
 2. **Install Node.js dependencies**
@@ -220,7 +220,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 
-1. Check the [Issues](https://github.com/yourusername/Asset-Verifier-System/issues) page
+1. Check the [Issues](https://github.com/vaibhav/vaibhav-asset-intelligence/issues) page
 2. Create a new issue with detailed information
 3. Join our community discussions
 
@@ -235,6 +235,6 @@ If you encounter any issues or have questions:
 
 ---
 
-**Made with ❤️ by [Your Name]**
+**Made with ❤️ by Vaibhav**
 
-For more information, visit our [documentation](https://github.com/yourusername/Asset-Verifier-System/wiki) or check out the [live demo](https://yourusername.github.io/Asset-Verifier-System).
+For more information, visit our [documentation](https://github.com/vaibhav/vaibhav-asset-intelligence/wiki) or check out the [live demo](https://vaibhav.github.io/vaibhav-asset-intelligence).
