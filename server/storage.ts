@@ -5,7 +5,7 @@ import {
   type Sale, type InsertSale,
   type InventoryLog,
   type ProductWithDetails
-} from "@shared/schema";
+} from "@shared/schema-sqlite";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 

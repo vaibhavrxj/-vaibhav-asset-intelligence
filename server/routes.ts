@@ -5,7 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import { db } from "./db";
-import { conversations, messages, visionStatusLogs, products, sales, materials, inventoryLogs } from "@shared/schema";
+import { conversations, messages, visionStatusLogs, products, sales, materials, inventoryLogs, type Product, type Material, type Sale } from "@shared/schema-sqlite";
 import { eq, desc, sql } from "drizzle-orm";
 
 const openai = new OpenAI({
@@ -103,7 +103,6 @@ export async function registerRoutes(
         detectedColor: input.detectedColor,
         detectedTexture: input.detectedTexture,
         detectedDimensions: input.detectedDimensions,
-        lastScannedAt: new Date(), // Update timestamp
       });
       
       // Log the scan
@@ -165,9 +164,9 @@ export async function registerRoutes(
         
         Current Data Summary:
         - Total Products: ${productsList.length}
-        - Products: ${productsList.map(p => `${p.name} (SKU: ${p.sku}, Stock: ${p.quantity}, Price: ₹${p.price})`).join(', ')}
+        - Products: ${productsList.map((p: Product) => `${p.name} (SKU: ${p.sku}, Stock: ${p.quantity}, Price: ₹${p.price})`).join(', ')}
         - Total Materials: ${materialsList.length}
-        - Materials: ${materialsList.map(m => `${m.name} (Stock: ${m.quantity} ${m.unit})`).join(', ')}
+        - Materials: ${materialsList.map((m: Material) => `${m.name} (Stock: ${m.quantity} ${m.unit})`).join(', ')}
         - Recent Sales: ${salesList.length} records
       `;
 
@@ -185,7 +184,7 @@ When asked about:
 Provide clear, concise answers with specific numbers and recommendations. Format currency in ₹ (Indian Rupees).`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5.2",
+        model: "claude-haiku-4.5",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: message }
@@ -212,10 +211,10 @@ Provide clear, concise answers with specific numbers and recommendations. Format
       const productsList = await db.select().from(products);
       const salesData = await db.select().from(sales).orderBy(desc(sales.timestamp));
       
-      const forecasts = productsList.map(product => {
+      const forecasts = productsList.map((product: Product) => {
         // Simple forecasting based on recent sales
-        const productSales = salesData.filter(s => s.productId === product.id);
-        const totalSold = productSales.reduce((sum, s) => sum + s.quantity, 0);
+        const productSales = salesData.filter((s: Sale) => s.productId === product.id);
+        const totalSold = productSales.reduce((sum: number, s: Sale) => sum + s.quantity, 0);
         const avgDailySales = productSales.length > 0 ? totalSold / Math.max(7, productSales.length) : 1;
         
         const predictions = [];
