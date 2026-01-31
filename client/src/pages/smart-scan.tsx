@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLatestScan, useVisionLogs, useVisionAnomalies, useTriggerScan } from "@/hooks/use-inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScanLine, Box, Ruler, Palette, Activity, Camera, AlertTriangle, CheckCircle, RefreshCcw } from "lucide-react";
+import { ScanLine, Box, Ruler, Palette, Activity, Camera, AlertTriangle, CheckCircle, RefreshCcw, CameraOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow, format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -28,17 +28,107 @@ export default function SmartScan() {
     status: string;
     bounding_box: BoundingBox;
   } | null>(null);
+  
+  // Camera functionality
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const handleTriggerScan = async () => {
+  // Camera functions
+  const startCamera = async () => {
     try {
-      const result = await triggerScan.mutateAsync();
-      if (result.success) {
-        setLastScanResult(result.data);
+      setCameraError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user" // Front camera
+        },
+        audio: false
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setIsCameraActive(true);
+      }
+    } catch (error) {
+      console.error("Camera access failed:", error);
+      setCameraError("Camera access denied or not available");
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        // Convert to blob for upload
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            await handleTriggerScan(blob);
+          }
+        }, 'image/jpeg', 0.8);
+      }
+    }
+  };
+
+  const handleTriggerScan = async (imageBlob?: Blob) => {
+    try {
+      if (imageBlob) {
+        // Send actual image for processing
+        const formData = new FormData();
+        formData.append('image', imageBlob, 'scan.jpg');
+        
+        const response = await fetch('/api/vision/scan', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) throw new Error('Scan failed');
+        const result = await response.json();
+        
+        if (result.success) {
+          setLastScanResult(result.data);
+        }
+      } else {
+        // Fallback to simulated scan if no image
+        const result = await triggerScan.mutateAsync();
+        if (result.success) {
+          setLastScanResult(result.data);
+        }
       }
     } catch (error) {
       console.error("Scan failed:", error);
     }
   };
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -85,18 +175,39 @@ export default function SmartScan() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            onClick={handleTriggerScan}
-            disabled={triggerScan.isPending}
-            data-testid="button-trigger-scan"
-          >
-            {triggerScan.isPending ? (
-              <RefreshCcw className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
+          {!isCameraActive ? (
+            <Button
+              onClick={startCamera}
+              variant="default"
+              data-testid="button-start-camera"
+            >
               <Camera className="w-4 h-4 mr-2" />
-            )}
-            Trigger Scan
-          </Button>
+              Start Camera
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={captureImage}
+                disabled={triggerScan.isPending}
+                data-testid="button-trigger-scan"
+              >
+                {triggerScan.isPending ? (
+                  <RefreshCcw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <ScanLine className="w-4 h-4 mr-2" />
+                )}
+                Trigger Scan
+              </Button>
+              <Button
+                onClick={stopCamera}
+                variant="outline"
+                data-testid="button-stop-camera"
+              >
+                <CameraOff className="w-4 h-4 mr-2" />
+                Stop Camera
+              </Button>
+            </>
+          )}
           <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 rounded-full border border-border">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span className="text-sm font-medium">Live</span>
@@ -108,14 +219,41 @@ export default function SmartScan() {
         <Card className="lg:col-span-2 border-border shadow-lg relative overflow-hidden h-[400px] bg-zinc-950 dark:bg-black text-white">
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black" />
           
-          <div className="absolute inset-0 z-10">
-            <motion.div 
-              className="w-full h-1 bg-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
-              animate={{ top: ["0%", "100%", "0%"] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          {/* Video element for camera feed */}
+          {isCameraActive && (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover z-0"
             />
+          )}
+          
+          {/* Hidden canvas for image capture */}
+          <canvas ref={canvasRef} className="hidden" />
+          
+          <div className="absolute inset-0 z-10">
+            {isCameraActive && (
+              <motion.div 
+                className="w-full h-1 bg-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.5)]"
+                animate={{ top: ["0%", "100%", "0%"] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              />
+            )}
             <div className="absolute top-4 right-4 font-mono text-xs text-green-500/80">
-              REC {new Date().toLocaleTimeString()}
+              {isCameraActive ? 'LIVE' : 'READY'} {new Date().toLocaleTimeString()}
+            </div>
+            
+            {/* Camera status indicator */}
+            <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                isCameraActive ? "bg-red-500 animate-pulse" : "bg-gray-500"
+              )} />
+              <span className="text-xs font-mono">
+                {isCameraActive ? 'CAMERA ON' : 'CAMERA OFF'}
+              </span>
             </div>
 
             <AnimatePresence>
@@ -155,11 +293,39 @@ export default function SmartScan() {
             </div>
           </div>
 
-          {!lastScanResult && (
+          {/* Camera error or no camera state */}
+          {!isCameraActive && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center">
-              <ScanLine className="w-16 h-16 text-green-500 mx-auto opacity-80" />
-              <div className="text-zinc-400 font-mono text-sm mt-4">YOLOv8n model ready</div>
-              <div className="text-zinc-500 text-xs mt-1">Click "Trigger Scan" to detect items</div>
+              {cameraError ? (
+                <>
+                  <CameraOff className="w-16 h-16 text-red-500 mx-auto opacity-80" />
+                  <div className="text-red-400 font-mono text-sm mt-4">Camera Access Error</div>
+                  <div className="text-zinc-500 text-xs mt-1">{cameraError}</div>
+                  <Button
+                    onClick={startCamera}
+                    variant="outline"
+                    className="mt-4"
+                  >
+                    <Camera className="w-4 h-4 mr-2" />
+                    Retry Camera
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Camera className="w-16 h-16 text-green-500 mx-auto opacity-80" />
+                  <div className="text-zinc-400 font-mono text-sm mt-4">YOLOv8n model ready</div>
+                  <div className="text-zinc-500 text-xs mt-1">Click "Start Camera" to begin detection</div>
+                </>
+              )}
+            </div>
+          )}
+          
+          {/* Camera active but no scan result */}
+          {isCameraActive && !lastScanResult && (
+            <div className="absolute inset-0 z-15 flex flex-col items-center justify-center text-center pointer-events-none">
+              <div className="text-zinc-400 font-mono text-sm mt-4 bg-black/50 backdrop-blur-sm px-4 py-2 rounded">
+                Camera Active - Click "Trigger Scan" to detect items
+              </div>
             </div>
           )}
 

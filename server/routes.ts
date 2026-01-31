@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import type { Server } from "http";
+import multer from "multer";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -7,16 +8,52 @@ import OpenAI from "openai";
 import { db } from "./db";
 import { conversations, messages, visionStatusLogs, products, sales, materials, inventoryLogs, type Product, type Material, type Sale } from "@shared/schema-sqlite";
 import { eq, desc, sql } from "drizzle-orm";
+import fs from 'fs';
+import path from 'path';
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+// Multer configuration for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // Health check endpoint for Railway
+  app.get('/health', (req, res) => {
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV,
+      port: process.env.PORT
+    });
+  });
+
+  // Root endpoint
+  app.get('/api/status', (req, res) => {
+    res.json({ 
+      message: 'Asset Verifier System API is running',
+      version: '1.0.0',
+      status: 'healthy'
+    });
+  });
 
   // Materials
   app.get(api.materials.list.path, async (req, res) => {
@@ -275,8 +312,8 @@ Provide clear, concise answers with specific numbers and recommendations. Format
     }
   });
 
-  // Simulated Vision Scan
-  app.post('/api/vision/scan', async (req, res) => {
+  // Enhanced Vision Scan Endpoint with Camera Support
+  app.post('/api/vision/scan', upload.single('image'), async (req, res) => {
     try {
       const productsList = await db.select().from(products);
       if (productsList.length === 0) {
@@ -296,16 +333,31 @@ Provide clear, concise answers with specific numbers and recommendations. Format
         height: Math.floor(Math.random() * 200) + 100
       };
 
-      // Log to database
-      await db.insert(visionStatusLogs).values({
+      // Handle image data if uploaded
+      let imageData = null;
+      if (req.file) {
+        // Convert buffer to base64
+        imageData = req.file.buffer.toString('base64');
+        console.log('Image received:', req.file.mimetype, req.file.size, 'bytes');
+        
+        // Here you could integrate with YOLO/OpenCV for real detection
+        // For now, we'll simulate based on the uploaded image
+      }
+
+      // Prepare the insert data with all required fields
+      const visionLogData = {
         productId: randomProduct.id,
         sku: randomProduct.sku,
         status,
         confidenceScore: confidence,
-        detectedClass: randomProduct.sku.split('-')[1],
-        boundingBox,
+        detectedClass: randomProduct.sku.split('-')[1] || 'UNKNOWN',
+        boundingBox: JSON.stringify(boundingBox),
+        imageData,
         notes: status !== 'OK' ? `${status} detected - manual review recommended` : null
-      });
+      };
+
+      // Log to database
+      await db.insert(visionStatusLogs).values(visionLogData);
 
       res.json({
         success: true,
@@ -316,7 +368,8 @@ Provide clear, concise answers with specific numbers and recommendations. Format
           confidence,
           status,
           bounding_box: boundingBox,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          image_processed: !!req.file
         }
       });
     } catch (error) {

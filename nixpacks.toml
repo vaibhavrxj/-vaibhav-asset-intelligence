@@ -1,0 +1,17 @@
+# Railway Deployment Configuration
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "python311"]
+
+[phases.build]
+cmds = [
+  "npm ci",
+  "npm run build"
+]
+
+[phases.deploy]
+cmd = "npm run start"
+
+[variables]
+NODE_ENV = "production"
