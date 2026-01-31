@@ -1,5 +1,5 @@
 # Multi-stage build for Asset Verifier System with AI capabilities
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Install Python and build dependencies
 RUN apk add --no-cache python3 py3-pip python3-dev build-base linux-headers
@@ -14,9 +14,9 @@ RUN npm ci --no-cache
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN npm run vercel-build
 
-FROM node:22-alpine AS production
+FROM node:20-alpine AS production
 
 # Install Python and runtime dependencies for AI services
 RUN apk add --no-cache \
@@ -48,7 +48,7 @@ COPY main.py ./
 # Create uploads directory for file handling
 RUN mkdir -p uploads
 
-# Expose port (Railway sets this via $PORT)
+# Expose port
 EXPOSE 3000
 
 # Start the application
