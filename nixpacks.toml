@@ -2,11 +2,11 @@
 providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "python311"]
+nixPkgs = ["nodejs_22", "python311"]
 
 [phases.build]
 cmds = [
-  "npm ci",
+  "npm ci --no-cache --prefer-offline",
   "npm run build"
 ]
 
