@@ -1,9 +1,12 @@
-# Railway Dockerfile for Asset Verifier System
-FROM node:22-alpine
+# Multi-stage build for Asset Verifier System with AI capabilities
+FROM node:22-alpine AS builder
+
+# Install Python and build dependencies
+RUN apk add --no-cache python3 py3-pip python3-dev build-base linux-headers
 
 WORKDIR /app
 
-# Install dependencies (including dev dependencies for build)
+# Install Node.js dependencies
 COPY package*.json ./
 RUN npm ci --no-cache
 
@@ -13,8 +16,37 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Remove dev dependencies after build
+FROM node:22-alpine AS production
+
+# Install Python and runtime dependencies for AI services
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    py3-numpy \
+    py3-opencv \
+    python3-dev \
+    build-base \
+    linux-headers \
+    && ln -sf python3 /usr/bin/python
+
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt ./
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Copy Node.js production dependencies
+COPY package*.json ./
 RUN npm ci --omit=dev --no-cache
+
+# Copy built application and Python services
+COPY --from=builder /app/dist ./dist
+COPY ai_services/ ./ai_services/
+COPY vision_engine.py ./
+COPY main.py ./
+
+# Create uploads directory for file handling
+RUN mkdir -p uploads
 
 # Expose port (Railway sets this via $PORT)
 EXPOSE 3000

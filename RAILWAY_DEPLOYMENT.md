@@ -1,4 +1,18 @@
-# Railway Deployment Guide for Asset Verifier System
+6
+RUN npm run build
+955ms
+> rest-express@1.0.0 build
+> tsx script/build.ts
+sh: tsx: not found
+Dockerfile:14
+-------------------
+12 |
+13 |     # Build the application
+14 | >>> RUN npm run build
+15 |
+16 |     # Expose port (Railway sets this via $PORT)
+-------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 127# Railway Deployment Guide for Asset Verifier System
 ## 🚨 **IMMEDIATE FIX for "Train Not Arrived" Error**
 
 ### **CRITICAL STEP - Add PostgreSQL Database**
