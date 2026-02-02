@@ -1,0 +1,13 @@
+node_modules
+.env*
+.git
+ai_services
+migrations
+script
+server
+src
+client/src
+*.md
+*.py
+requirements.txt
+pyproject.toml
