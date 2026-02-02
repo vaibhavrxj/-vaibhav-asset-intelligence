@@ -7,7 +7,12 @@ script
 server
 src
 client/src
+api_backup
 *.md
 *.py
 requirements.txt
 pyproject.toml
+drizzle.config.ts
+vite.config.ts
+tailwind.config.ts
+tsconfig.json
