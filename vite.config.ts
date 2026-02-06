@@ -29,14 +29,11 @@ export default defineConfig({
       "@assets": path.resolve(__dirname, "attached_assets"),
     },
   },
-  root: path.resolve(__dirname, "client"),
+  root: "client",
   base: "/",
   build: {
-    outDir: path.resolve(__dirname, "dist/public"),
+    outDir: "../dist/public",
     emptyOutDir: true,
-    rollupOptions: {
-      input: path.resolve(__dirname, "client/index.html")
-    }
   },
   server: {
     fs: {
