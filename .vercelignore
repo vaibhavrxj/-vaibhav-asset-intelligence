@@ -1,20 +1,7 @@
-node_modules
-.env*
-.git
-ai_services
-migrations
-script
-server
-src
-client/src
-*.md
-*.py
-requirements.txt
-pyproject.toml
-drizzle.config.ts
-vite.config.ts
-tailwind.config.ts
-tsconfig.json
-*.ts
-*.js
+# Ignore everything except the built static files
+*
+!dist/
+!dist/public/
 !dist/public/**
+!package.json
+!vercel.json
