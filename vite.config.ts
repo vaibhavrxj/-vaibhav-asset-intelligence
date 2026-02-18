@@ -30,12 +30,12 @@ export default defineConfig({
       "@assets": path.resolve(__dirname, "attached_assets"),
     },
   },
-  base: "/",
+  base: process.env.VITE_BASE_PATH || "/",
   build: {
     outDir: "../dist/public",
     emptyOutDir: true,
     rollupOptions: {
-      input: "index.html"
+      input: path.resolve(__dirname, "client", "index.html")
     }
   },
   server: {

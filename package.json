@@ -11,12 +11,14 @@
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build",
     "build:client": "vite build",
+    "build:vercel": "cross-env VITE_BASE_PATH=/ vite build",
+    "build:gh-pages": "cross-env VITE_BASE_PATH=/Asset-Verifier-System/ vite build",
     "start": "cross-env NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "deploy:gh": "npm run build:client && gh-pages -d dist/public",
+    "deploy:gh": "npm run build:gh-pages && gh-pages -d dist/public",
     "preview": "vite preview --port 4173",
-    "vercel-build": "vite build"
+    "vercel-build": "npm run build:vercel"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -95,6 +97,7 @@
     "@replit/vite-plugin-cartographer": "^0.4.4",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
+    "gh-pages": "^6.1.1",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.18",
     "@types/better-sqlite3": "^7.6.13",
@@ -107,7 +110,6 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@types/ws": "^8.5.13",
-    "@vercel/node": "^5.5.28",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
     "cross-env": "^10.1.0",

@@ -36,16 +36,6 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  // Health check endpoint for Railway
-  app.get('/health', (req, res) => {
-    res.json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV,
-      port: process.env.PORT
-    });
-  });
-
   // Root endpoint
   app.get('/api/status', (req, res) => {
     res.json({ 

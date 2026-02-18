@@ -7,7 +7,6 @@ script
 server
 src
 client/src
-api_backup
 *.md
 *.py
 requirements.txt
@@ -16,3 +15,6 @@ drizzle.config.ts
 vite.config.ts
 tailwind.config.ts
 tsconfig.json
+*.ts
+*.js
+!dist/public/**

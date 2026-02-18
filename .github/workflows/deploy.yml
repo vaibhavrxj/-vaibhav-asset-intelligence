@@ -20,31 +20,17 @@ jobs:
         node-version: '20'
         cache: 'npm'
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
     - name: Install Node.js dependencies
       run: npm ci
 
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-
-    - name: Setup Database
-      run: npm run db:push
-
     - name: Build application
-      run: npm run build
+      run: npm run build:client
       env:
         NODE_ENV: production
 
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main'
-      uses: peaceiris/actions-gh-pages@v3
+      uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist
-        cname: vaibhav-assets.com  
+        publish_dir: ./dist/public  
