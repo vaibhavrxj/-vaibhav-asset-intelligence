@@ -39,7 +39,7 @@ export function Layout({ children }: LayoutProps) {
             <Hexagon className="w-6 h-6 text-primary animate-pulse" />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-none tracking-tight">VisonFlow</h1>
+            <h1 className="font-bold text-lg leading-none tracking-tight">AssetFlow</h1>
             <span className="text-xs text-muted-foreground font-mono">v2.4.0-IND</span>
           </div>
         </div>

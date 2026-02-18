@@ -7,6 +7,7 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  root: "client",
   plugins: [
     react(),
     runtimeErrorOverlay(),
@@ -31,7 +32,7 @@ export default defineConfig({
   },
   base: "/",
   build: {
-    outDir: "dist/public",
+    outDir: "../dist/public",
     emptyOutDir: true,
     rollupOptions: {
       input: "index.html"

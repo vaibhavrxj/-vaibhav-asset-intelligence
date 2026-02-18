@@ -1,8 +1,8 @@
-# VisonFlow - AI-Powered Inventory Management System
+# AssetFlow - AI-Powered Inventory Management System
 
 ## Overview
 
-VisonFlow is a full-stack inventory management application designed for handmade product businesses. It combines traditional inventory tracking with AI-powered features including computer vision scanning, predictive demand forecasting, and an intelligent chatbot assistant. The system manages raw materials, finished products, sales tracking, and provides real-time analytics through a modern dashboard interface.
+AssetFlow is a full-stack inventory management application designed for handmade product businesses. It combines traditional inventory tracking with AI-powered features including computer vision scanning, predictive demand forecasting, and an intelligent chatbot assistant. The system manages raw materials, finished products, sales tracking, and provides real-time analytics through a modern dashboard interface.
 
 ## User Preferences
 

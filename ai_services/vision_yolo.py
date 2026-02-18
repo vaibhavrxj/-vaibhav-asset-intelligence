@@ -234,6 +234,24 @@ def get_stream_info():
         'status': 'ready'
     })
 
+@app.route('/', methods=['GET'])
+def index():
+    """Root endpoint with API information."""
+    return jsonify({
+        'service': 'Asset Verifier Vision Engine',
+        'version': '1.0.0',
+        'model': 'YOLOv8n (nano)',
+        'simulation_mode': SIMULATION_MODE,
+        'endpoints': {
+            'health': '/health',
+            'scan_item': 'POST /api/vision/scan',
+            'status_logs': 'GET /api/vision/status-logs',
+            'anomalies': 'GET /api/vision/anomalies',
+            'stream_info': 'GET /api/vision/stream'
+        },
+        'status': 'running'
+    })
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint."""
